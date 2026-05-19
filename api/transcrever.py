@@ -3,6 +3,7 @@ import json
 import os
 import requests
 
+# Dicionário para armazenar as fatias em memória
 arquivos_temporarios = {}
 
 class handler(BaseHTTPRequestHandler):
@@ -21,5 +22,40 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(data).encode())
 
     def do_POST(self):
-        # A lógica de processamento que você já tem aqui...
-        # Apenas certifique-se de terminar com self.enviar_resposta(200, {...})
+        if self.path == '/api/transcrever-final':
+            try:
+                content_length = int(self.headers['Content-Length'])
+                body_bytes = self.rfile.read(content_length)
+                
+                chunk_index = int(self.headers.get('x-chunk-index', 0))
+                total_chunks = int(self.headers.get('x-total-chunks', 1))
+                session_id = self.headers.get('x-session-id', 'default')
+
+                if session_id not in arquivos_temporarios:
+                    arquivos_temporarios[session_id] = [None] * total_chunks
+                
+                arquivos_temporarios[session_id][chunk_index] = body_bytes
+
+                if None not in arquivos_temporarios[session_id]:
+                    full_audio = b"".join(arquivos_temporarios[session_id])
+                    del arquivos_temporarios[session_id]
+
+                    openai_key = os.environ.get("OPENAI_API_KEY")
+                    files = {'file': ('audio_completo.m4a', full_audio, 'audio/m4a')}
+                    data = {'model': 'whisper-1', 'language': 'pt'}
+                    
+                    resposta = requests.post("https://api.openai.com/v1/audio/transcriptions", 
+                                             headers={"Authorization": f"Bearer {openai_key}"}, 
+                                             files=files, data=data)
+                    
+                    self.enviar_resposta(200, {"texto": resposta.json().get("text", "")})
+                else:
+                    self.enviar_resposta(200, {"status": "recebido_parte", "parte": chunk_index})
+            except Exception as e:
+                self.enviar_resposta(500, {"erro": str(e)})
+
+# Adicionando o bloco para rodar o servidor ao executar o script
+if __name__ == '__main__':
+    from http.server import HTTPServer
+    server = HTTPServer(('0.0.0.0', 10000), handler)
+    server.serve_forever()
