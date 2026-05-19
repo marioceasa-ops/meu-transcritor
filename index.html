@@ -236,7 +236,7 @@
                     <div class="drop-zone" onclick="document.getElementById('file-input').click()">
                         <i class="fa-solid fa-cloud-arrow-up" id="upload-icon"></i>
                         <p id="file-label" style="font-weight: 600;">Arraste ou clique para carregar o áudio/vídeo</p>
-                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Formatos aceitos: MP3, WAV, M4A, MP4, MOV (Máx. 25MB)</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Formatos aceitos: MP3, WAV, M4A, MP4, MOV (Máx. 50MB)</p>
                         <input type="file" id="file-input" accept="audio/*,video/*,.mov" required style="display: none;" onchange="atualizarNomeArquivo(this)">
                     </div>
                 </div>
@@ -305,11 +305,10 @@
             if(planoSelecionado === 'mensal') {
                 btn.disabled = true;
                 btn.innerText = "A validar assinatura e processar...";
-                await enviarAudioFinal(arquivo);
+                await processarEnvioFatiado(arquivo);
                 return;
             }
 
-            // FLUXO DO PIX AVULSO (BATE NAS ROTAS CORRETAS)
             btn.disabled = true;
             btn.innerText = "A gerar QR Code Pix...";
 
@@ -338,7 +337,7 @@
                             clearInterval(checador);
                             removerModalPix();
                             btn.innerText = "Confirmado! Processando Inteligência Artificial...";
-                            await enviarAudioFinal(arquivo);
+                            await processarEnvioFatiado(arquivo);
                         }
                     } catch (errCheck) {
                         console.error("Erro na checagem automática:", errCheck);
@@ -352,27 +351,47 @@
             }
         });
 
-        async function enviarAudioFinal(arquivo) {
+        // NOVA FUNÇÃO DO CLIENTE PARA FATIAR ÁUDIOS GRANDES
+        async function processarEnvioFatiado(arquivo) {
             const btn = document.getElementById('btn-acao');
+            const TAMANHO_MAX_FATIA = 3.5 * 1024 * 1024; // 3.5 MB está seguro abaixo do teto da Vercel
+            const totalFatias = Math.ceil(arquivo.size / TAMANHO_MAX_FATIA);
+            let textoCompleto = "";
+
             try {
-                // Enviamos o arquivo diretamente no corpo do POST como binário puro para simplificar a leitura do handler
-                const res = await fetch('/api/transcrever-final', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/octet-stream' },
-                    body: arquivo 
-                });
-                const dados = await res.json();
-                
-                if(res.ok) {
-                    document.getElementById('result-panel').style.display = 'block';
-                    document.getElementById('transcription-text').innerText = dados.texto;
-                    document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth' });
-                } else {
-                    alert("Erro no Servidor: " + (dados.erro || "Ocorreu uma falha na transcrição."));
+                for (let i = 0; i < totalFatias; i++) {
+                    const inicio = i * TAMANHO_MAX_FATIA;
+                    const fim = Math.min(inicio + TAMANHO_MAX_FATIA, arquivo.size);
+                    const fatiaBlob = arquivo.slice(inicio, fim);
+
+                    btn.innerText = `Processando parte ${i + 1} de ${totalFatias}...`;
+
+                    const res = await fetch('/api/transcrever-final', { 
+                        method: 'POST', 
+                        headers: { 
+                            'Content-Type': 'application/octet-stream',
+                            'x-chunk-index': i,
+                            'x-total-chunks': totalFatias
+                        },
+                        body: fatiaBlob 
+                    });
+                    
+                    const dados = await res.json();
+                    if (!res.ok) throw new Error(dados.erro || "Falha na parte do processamento.");
+
+                    if (dados.texto) {
+                        textoCompleto += dados.texto + " ";
+                    }
                 }
+
+                document.getElementById('result-panel').style.display = 'block';
+                document.getElementById('transcription-text').innerText = textoCompleto.trim();
+                document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth' });
+
             } catch(e) {
-                alert("Erro ao conectar com a API de Transcrição.");
+                alert("Erro ao processar áudio: " + e.message);
             }
+
             btn.disabled = false;
             selecionarPlano(planoSelecionado);
         }

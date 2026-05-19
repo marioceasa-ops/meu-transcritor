@@ -71,7 +71,7 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self.enviar_resposta(500, {"erro": str(e)})
 
-        # 3. ROTA FINAL DA TRANSCRIÇÃO (PROCESSA O AUDIO/VÍDEO REAL)
+        # 3. ROTA FINAL DA TRANSCRIÇÃO (PROCESSA O BLOCO ENVIADO)
         elif self.path == '/api/transcrever-final':
             openai_key = os.environ.get("OPENAI_API_KEY")
             if not openai_key:
@@ -79,18 +79,18 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                # Lendo o corpo do multipart (arquivo enviado)
                 content_length = int(self.headers['Content-Length'])
                 body_bytes = self.rfile.read(content_length)
 
-                # Para enviar para a OpenAI mantendo a estrutura simples do handler nativo, 
-                # repassamos o conteúdo diretamente via requisição multipart para a API do Whisper
+                # Identifica o índice da fatia pelos headers personalizados do cliente
+                chunk_index = self.headers.get('x-chunk-index', '0')
+
                 url_openai = "https://api.openai.com/v1/audio/transcriptions"
                 headers_openai = {"Authorization": f"Bearer {openai_key}"}
                 
-                # Enviando via requests simulando o form-data de arquivos
+                # Enviamos o bloco indicando um nome de arquivo dinâmico temporário para o Whisper validar
                 files = {
-                    'file': ('audio.m4a', body_bytes, 'application/octet-stream')
+                    'file': (f'chunk_{chunk_index}.m4a', body_bytes, 'application/octet-stream')
                 }
                 data = {
                     'model': 'whisper-1',
@@ -99,12 +99,12 @@ class handler(BaseHTTPRequestHandler):
 
                 resposta_openai = requests.post(url_openai, headers=headers_openai, files=files, data=data)
                 
-                if respuesta_openai.status_code == 200:
-                    resultado_txt = respuesta_openai.json().get("text", "")
+                if resposta_openai.status_code == 200:
+                    resultado_txt = resposta_openai.json().get("text", "")
                     self.enviar_resposta(200, {"texto": resultado_txt})
                 else:
-                    erro_detalhe = respuesta_openai.json().get("error", {}).get("message", "Erro na OpenAI.")
-                    self.enviar_resposta(400, {"erro": f"Falha na OpenAI: {erro_detalhe}"})
+                    erro_detalhe = resposta_openai.json().get("error", {}).get("message", "Erro na OpenAI.")
+                    self.enviar_resposta(400, {"erro": f"Falha na OpenAI (Parte {chunk_index}): {erro_detalhe}"})
 
             except Exception as e:
                 self.enviar_resposta(500, {"erro": f"Erro interno no processamento: {str(e)}"})
@@ -117,4 +117,4 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(json.dumps(dados).encode('utf-8')))
+        self.wfile.write(json.dumps(dados).encode('utf-8'))
