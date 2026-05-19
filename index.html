@@ -313,7 +313,7 @@
             btn.innerText = "A gerar QR Code Pix...";
 
             try {
-                const res = await fetch('/api/criar-pix', {
+                const res = await fetch('https://meu-transcritor.onrender.com/api/criar-pix', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: email })
@@ -326,7 +326,7 @@
 
                 const checador = setInterval(async () => {
                     try {
-                        const statusRes = await fetch('/api/checar-pix', {
+                        const statusRes = await fetch('https://meu-transcritor.onrender.com/api/checar-pix', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id_pagamento: dadosPix.id_pagamento })
@@ -366,7 +366,7 @@
 
                     btn.innerText = `Processando parte ${i + 1} de ${totalFatias}...`;
 
-                    const res = await fetch('/api/transcrever-final', { 
+                    const res = await fetch('https://meu-transcritor.onrender.com/api/transcrever-final', { 
                         method: 'POST', 
                         headers: { 
                             'Content-Type': 'application/octet-stream',
