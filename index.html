@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AudioScript Pro - Transcrição Avançada com IA</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .pricing-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .price-card {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            backdrop-filter: blur(12px);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .price-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .price-card.active {
+            border-color: var(--accent-blue);
+            background: rgba(30, 41, 59, 0.9);
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.2);
+        }
+
+        .price-card h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+        .price-card .price { font-size: 2.2rem; font-weight: 700; margin: 1rem 0; color: #fff; }
+        .price-card .price span { font-size: 0.9rem; color: var(--text-muted); }
+
+        .features { text-align: left; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted); list-style: none; }
+        .features li { margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .features li i { color: var(--success); }
+
+        .main-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2.5rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .input-group { margin-bottom: 1.5rem; }
+        .input-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted); }
+        .input-group input[type="email"] {
+            width: 100%;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-group input[type="email"]:focus { border-color: var(--accent-blue); }
+
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .drop-zone:hover { border-color: var(--accent-purple); background: rgba(15, 23, 42, 0.5); }
+        .drop-zone i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 1.2rem;
+            background: linear-gradient(to right, #2563eb, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+        .btn-action:hover { opacity: 0.95; }
+        .btn-action:active { transform: scale(0.99); }
+        .btn-action:disabled { background: #475569; cursor: not-allowed; box-shadow: none; }
+
+        .result-panel {
+            margin-top: 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: none;
+        }
+        .result-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1rem; }
+        .action-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        .btn-tool {
+            padding: 0.5rem 0.75rem;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-tool:hover { background: rgba(255,255,255,0.15); border-color: var(--accent-blue); }
+
+        .transcription-box {
+            max-height: 350px;
+            overflow-y: auto;
+            padding: 1rem;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            line-height: 1.7;
+            font-size: 1rem;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-wand-magic-sparkles"></i> AudioScript Pro</h1>
+            <p>Sua central inteligente de transcrição de áudio acelerada por IA</p>
+        </header>
+
+        <section class="pricing-section">
+            <div class="price-card active" id="card-avulso" onclick="selecionarPlano('avulso')">
+                <h3>Uso Avulso</h3>
+                <div class="price">R$ 15,00 <span>/ envio</span></div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Pague por uso único sem taxas extras.</p>
+                <ul class="features">
+                    <li><i class="fa-solid fa-circle-check"></i> Exportações ilimitadas</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Processamento Whisper IA</li>
+                </ul>
+            </div>
+
+            <div class="price-card" id="card-mensal" onclick="selecionarPlano('mensal')">
+                <h3>Plano Mensal</h3>
+                <div class="price">R$ 49,90 <span>/ mês</span></div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Transcrições e conversões ilimitadas.</p>
+                <ul class="features">
+                    <li><i class="fa-solid fa-circle-check"></i> Acesso direto de assinante</li>
+                    <li><i class="fa-solid fa-circle-check"></i> Suporte VIP priorizado</li>
+                </ul>
+            </div>
+        </section>
+
+        <div class="main-card">
+            <form id="transcrever-form">
+                <div class="input-group">
+                    <label for="email">E-mail de Cadastro:</label>
+                    <input type="email" id="email" placeholder="nome@provedor.com" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Selecione seu Ficheiro (Áudio ou Vídeo):</label>
+                    <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+                        <i class="fa-solid fa-cloud-arrow-up" id="upload-icon"></i>
+                        <p id="file-label" style="font-weight: 600;">Arraste ou clique para carregar o áudio/vídeo</p>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Formatos aceitos: MP3, WAV, M4A, MP4, MOV (Máx. 25MB)</p>
+                        <input type="file" id="file-input" accept="audio/*,video/*,.mov" required style="display: none;" onchange="atualizarNomeArquivo(this)">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-action" id="btn-acao">
+                    <i class="fa-solid fa-bolt"></i> <span id="text-btn">Processar e Gerar Pix</span>
+                </button>
+            </form>
+
+            <div class="result-panel" id="result-panel">
+                <div class="result-header">
+                    <span style="font-weight: 700; font-size: 0.95rem; color: var(--success);">
+                        <i class="fa-solid fa-circle-check"></i> Transcrição Pronta
+                    </span>
+                    <div class="action-buttons">
+                        <button class="btn-tool" onclick="copiarTexto()"><i class="fa-solid fa-copy"></i> Copiar</button>
+                        <button class="btn-tool" onclick="baixarTXT()"><i class="fa-solid fa-file-lines"></i> .TXT</button>
+                        <button class="btn-tool" onclick="baixarDOCX()"><i class="fa-solid fa-file-word"></i> Word</button>
+                        <button class="btn-tool" onclick="baixarPDF()"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                    </div>
+                </div>
+                <div class="transcription-box" id="transcription-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let planoSelecionado = 'avulso';
+
+        function selecionarPlano(plano) {
+            planoSelecionado = plano;
+            document.getElementById('card-avulso').classList.remove('active');
+            document.getElementById('card-mensal').classList.remove('active');
+            
+            if(plano === 'avulso') {
+                document.getElementById('card-avulso').classList.add('active');
+                document.getElementById('text-btn').innerText = "Processar e Gerar Pix";
+            } else {
+                document.getElementById('card-mensal').classList.add('active');
+                document.getElementById('text-btn').innerText = "Iniciar Transcrição Instantânea";
+            }
+        }
+
+        function atualizarNomeArquivo(input) {
+            const label = document.getElementById('file-label');
+            const icon = document.getElementById('upload-icon');
+            if (input.files.length > 0) {
+                const arquivo = input.files[0];
+                label.innerHTML = `Selecionado: <span style="color:#a855f7;">${arquivo.name}</span>`;
+                
+                if (arquivo.type.startsWith('video/') || arquivo.name.toLowerCase().endsWith('.mov')) {
+                    icon.className = "fa-solid fa-file-video";
+                } else {
+                    icon.className = "fa-solid fa-file-audio";
+                }
+            }
+        }
+
+        const form = document.getElementById('transcrever-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const arquivo = document.getElementById('file-input').files[0];
+            const btn = document.getElementById('btn-acao');
+
+            if(planoSelecionado === 'mensal') {
+                btn.disabled = true;
+                btn.innerText = "A validar assinatura e processar...";
+                await enviarAudioFinal(arquivo);
+                return;
+            }
+
+            // FLUXO DO PIX AVULSO (BATE NAS ROTAS CORRETAS)
+            btn.disabled = true;
+            btn.innerText = "A gerar QR Code Pix...";
+
+            try {
+                const res = await fetch('/api/criar-pix', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const dadosPix = await res.json();
+                if(!res.ok) throw new Error(dadosPix.erro || "Erro inesperado ao criar Pix.");
+
+                mostrarModalPix(dadosPix.qr_code_base64, dadosPix.qr_code);
+
+                const checador = setInterval(async () => {
+                    try {
+                        const statusRes = await fetch('/api/checar-pix', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id_pagamento: dadosPix.id_pagamento })
+                        });
+                        const statusDados = await statusRes.json();
+
+                        if(statusDados.status === 'approved') {
+                            clearInterval(checador);
+                            removerModalPix();
+                            btn.innerText = "Confirmado! Processando Inteligência Artificial...";
+                            await enviarAudioFinal(arquivo);
+                        }
+                    } catch (errCheck) {
+                        console.error("Erro na checagem automática:", errCheck);
+                    }
+                }, 5000);
+
+            } catch(err) {
+                alert(err.message);
+                selecionarPlano(planoSelecionado);
+                btn.disabled = false;
+            }
+        });
+
+        async function enviarAudioFinal(arquivo) {
+            const btn = document.getElementById('btn-acao');
+            try {
+                // Enviamos o arquivo diretamente no corpo do POST como binário puro para simplificar a leitura do handler
+                const res = await fetch('/api/transcrever-final', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/octet-stream' },
+                    body: arquivo 
+                });
+                const dados = await res.json();
+                
+                if(res.ok) {
+                    document.getElementById('result-panel').style.display = 'block';
+                    document.getElementById('transcription-text').innerText = dados.texto;
+                    document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    alert("Erro no Servidor: " + (dados.erro || "Ocorreu uma falha na transcrição."));
+                }
+            } catch(e) {
+                alert("Erro ao conectar com a API de Transcrição.");
+            }
+            btn.disabled = false;
+            selecionarPlano(planoSelecionado);
+        }
+
+        function mostrarModalPix(img, copia) {
+            const modal = `
+                <div id="modal-p" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); display:flex; justify-content:center; align-items:center; z-index:99999; backdrop-filter:blur(8px);">
+                    <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); padding:2rem; border-radius:20px; text-align:center; max-width:360px; width:90%; color:#fff;">
+                        <h3 style="margin-bottom:0.5rem;"><i class="fa-brands fa-pix" style="color:#32bcad;"></i> Pague com Pix</h3>
+                        <p style="font-size:0.85rem; color:#94a3b8; margin-bottom:1.5rem;">Aguardando pagamento de R$ 15,00 para liberar:</p>
+                        <img src="data:image/png;base64,${img}" style="width:200px; height:200px; border-radius:12px; margin:0 auto; display:block;" />
+                        <input type="text" value="${copia}" readonly style="width:100%; padding:0.8rem; background:#0f172a; border:1px solid rgba(255,255,255,0.1); color:#38bdf8; border-radius:8px; margin-top:1.5rem; text-align:center; font-size:0.75rem;" onclick="this.select(); document.execCommand('copy'); alert('Copiado!');" />
+                        <p style="font-size:0.85rem; color:#10b981; margin-top:1rem; font-weight:600;"><i class="fa-solid fa-spinner fa-spin"></i> Sincronizando com o banco...</p>
+                    </div>
+                </div>`;
+            document.body.insertAdjacentHTML('beforeend', modal);
+        }
+
+        function removerModalPix() { const m = document.getElementById('modal-p'); if(m) m.remove(); }
+
+        function copiarTexto() {
+            const txt = document.getElementById('transcription-text').innerText;
+            navigator.clipboard.writeText(txt);
+            alert("Texto copiado para a Área de Transferência!");
+        }
+
+        function baixarTXT() {
+            const txt = document.getElementById('transcription-text').innerText;
+            const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'transcricao.txt';
+            a.click();
+        }
+
+        function baixarDOCX() {
+            const txt = document.getElementById('transcription-text').innerText;
+            const conteudo = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><title>Transcrição</title><style>body { font-family: Arial; line-height: 1.6; }</style></head><body><p>${txt.replace(/\n/g, '<br>')}</p></body></html>`;
+            const blob = new Blob(['\ufeff' + conteudo], { type: 'application/msword' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'transcricao.doc';
+            a.click();
+        }
+
+        function baixarPDF() {
+            const elemento = document.getElementById('transcription-text');
+            const opcoes = { margin: 1, filename: 'transcricao.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+            html2pdf().set(opcoes).from(elemento).save();
+        }
+    </script>
+</body>
+</html>
