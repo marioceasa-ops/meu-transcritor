@@ -3,45 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AudioScript Pro - Transcrição Avançada</title>
+    <title>AudioScript Pro - Transcrição Avançada com IA</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
-        /* (Mantenha seu CSS atual aqui, omitido para brevidade) */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; padding: 2rem 1rem; }
+        .container { max-width: 900px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 3rem; }
+        header h1 { font-size: 2.5rem; font-weight: 800; background: linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .main-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 24px; padding: 2.5rem; backdrop-filter: blur(12px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .input-group { margin-bottom: 1.5rem; }
+        .input-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted); }
+        input[type="email"] { width: 100%; padding: 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 12px; color: #fff; outline: none; }
+        
+        .btn-action { width: 100%; padding: 1.2rem; background: linear-gradient(to right, #2563eb, #7c3aed); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+        .btn-action:disabled { background: #475569; }
+        
+        .result-panel { margin-top: 2rem; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; display: none; }
+        .transcription-box { max-height: 350px; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
+
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-wand-magic-sparkles"></i> AudioScript Pro</h1>
+        </header>
+
+        <div class="main-card">
+            <form id="transcrever-form">
+                <div class="input-group">
+                    <label>E-mail de Cadastro:</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="input-group">
+                    <label>Selecione seu Ficheiro:</label>
+                    <input type="file" id="file-input" accept="audio/*,video/*" required>
+                </div>
+                <button type="submit" class="btn-action" id="btn-acao">
+                    <i class="fa-solid fa-bolt"></i> <span id="text-btn">Processar Transcrição</span>
+                </button>
+            </form>
+
+            <div class="result-panel" id="result-panel">
+                <div class="transcription-box" id="transcription-text"></div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let planoSelecionado = 'avulso';
-
-        // ... (Mantenha as funções selecionarPlano e atualizarNomeArquivo) ...
-
         const form = document.getElementById('transcrever-form');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('email').value;
             const arquivo = document.getElementById('file-input').files[0];
             const btn = document.getElementById('btn-acao');
+            btn.disabled = true;
 
-            // [LÓGICA DE PAGAMENTO AVULSO MANTIDA AQUI...]
-            // Ao ser aprovado, chama a função abaixo:
-            // await processarEnvioFatiado(arquivo);
-        });
-
-        async function processarEnvioFatiado(arquivo) {
-            const btn = document.getElementById('btn-acao');
-            const TAMANHO_MAX_FATIA = 3.5 * 1024 * 1024; 
+            const TAMANHO_MAX_FATIA = 3.5 * 1024 * 1024;
             const totalFatias = Math.ceil(arquivo.size / TAMANHO_MAX_FATIA);
-            
-            // ID único para esta sessão de upload
             const sessionId = Date.now().toString();
 
             try {
                 for (let i = 0; i < totalFatias; i++) {
-                    const inicio = i * TAMANHO_MAX_FATIA;
-                    const fim = Math.min(inicio + TAMANHO_MAX_FATIA, arquivo.size);
-                    const fatiaBlob = arquivo.slice(inicio, fim);
-
-                    btn.innerText = `Enviando parte ${i + 1} de ${totalFatias}...`;
+                    const fatiaBlob = arquivo.slice(i * TAMANHO_MAX_FATIA, Math.min((i + 1) * TAMANHO_MAX_FATIA, arquivo.size));
+                    btn.innerText = `Processando parte ${i + 1} de ${totalFatias}...`;
 
                     const res = await fetch('https://meu-transcritor.onrender.com/api/transcrever-final', { 
                         method: 'POST', 
@@ -55,22 +94,15 @@
                     });
                     
                     const dados = await res.json();
-                    if (!res.ok) throw new Error(dados.erro || "Falha no processamento.");
-
-                    // Se o servidor retornou o texto, finalizamos
                     if (dados.texto) {
                         document.getElementById('result-panel').style.display = 'block';
                         document.getElementById('transcription-text').innerText = dados.texto;
-                        document.getElementById('result-panel').scrollIntoView({ behavior: 'smooth' });
-                        btn.innerText = "Transcrição Concluída!";
+                        btn.innerText = "Concluído!";
                         return;
                     }
                 }
-            } catch(e) {
-                alert("Erro ao processar: " + e.message);
-                btn.disabled = false;
-            }
-        }
+            } catch(e) { alert("Erro: " + e.message); btn.disabled = false; }
+        });
     </script>
 </body>
 </html>
