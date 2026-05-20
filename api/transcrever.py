@@ -30,7 +30,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, x-chunk-index, x-total-chunks, x-session-id')
+        self.send_header('Access-Control-Allow-Headers', '*')
         self.end_headers()
 
     def enviar_resposta(self, status, data):
