@@ -2,50 +2,39 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>AudioScript Pro</title>
+    <title>Transcritor de Áudio Profissional - IA</title>
+    <link rel="stylesheet" href="style.css"> 
 </head>
 <body>
-    <form id="transcrever-form">
-        <input type="email" id="email" required>
-        <input type="file" id="file-input" required>
-        <button type="submit" id="btn-acao">Processar Transcrição</button>
-    </form>
-    <div id="transcription-text"></div>
+    <header>
+        <h1>Transcritor de Áudio Profissional</h1>
+    </header>
+    
+    <main>
+        <div id="status" class="status-message" style="display:none;"></div>
+        <button id="botaoEnviar">Enviar e Iniciar Transcrição</button>
+    </main>
 
     <script>
-        const form = document.getElementById('transcrever-form');
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const arquivo = document.getElementById('file-input').files[0];
-            const btn = document.getElementById('btn-acao');
-            btn.disabled = true;
+        // Função que você quer que funcione:
+        async function fazerTranscricaoFinal(arquivo) {
+            const formData = new FormData();
+            formData.append('file', arquivo);
 
-            const TAMANHO_MAX_FATIA = 3.5 * 1024 * 1024;
-            const totalFatias = Math.ceil(arquivo.size / TAMANHO_MAX_FATIA);
-            const sessionId = Date.now().toString();
-
-            for (let i = 0; i < totalFatias; i++) {
-                const fatiaBlob = arquivo.slice(i * TAMANHO_MAX_FATIA, Math.min((i + 1) * TAMANHO_MAX_FATIA, arquivo.size));
-                btn.innerText = `Processando parte ${i + 1} de ${totalFatias}...`;
-
-                const res = await fetch('https://meu-transcritor.onrender.com/api/transcrever-final', { 
-                    method: 'POST', 
-                    headers: { 
-                        'x-chunk-index': i,
-                        'x-total-chunks': totalFatias,
-                        'x-session-id': sessionId
-                    },
-                    body: fatiaBlob
+            try {
+                const response = await fetch('/api/transcrever', {
+                    method: 'POST',
+                    body: formData
                 });
+                const dados = await response.json();
                 
-                const dados = await res.json();
-                if (dados.texto) {
-                    document.getElementById('transcription-text').innerText = dados.texto;
-                    btn.innerText = "Concluído!";
-                    return;
-                }
+                const resultadoDiv = document.getElementById('status');
+                resultadoDiv.style.display = 'block';
+                resultadoDiv.innerText = dados.texto || dados.erro;
+            } catch (e) {
+                alert("Erro: " + e.message);
             }
-        });
+        }
     </script>
 </body>
 </html>

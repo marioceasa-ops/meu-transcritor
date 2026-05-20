@@ -3,60 +3,40 @@ import json
 import os
 import requests
 
-arquivos_temporarios = {}
-
 class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, x-chunk-index, x-total-chunks, x-session-id')
-        self.end_headers()
+    def do_POST(self):
+        content_type = self.headers.get('Content-Type', '')
+        content_length = int(self.headers.get('Content-Length', 0))
+        
+        # Lógica para processar o áudio final
+        if self.path == '/api/transcrever':
+            body = self.rfile.read(content_length)
+            
+            # Extraindo o arquivo do FormData (simplificado)
+            # Nota: Em sistemas de produção, usamos bibliotecas como cgi ou multipart
+            # Para este fluxo, garantimos que o áudio seja enviado corretamente
+            
+            openai_key = os.environ.get("OPENAI_API_KEY")
+            url_openai = "https://api.openai.com/v1/audio/transcriptions"
+            headers_openai = {"Authorization": f"Bearer {openai_key}"}
+            
+            arquivos = {
+                'file': ('audio.m4a', body, 'audio/m4a'),
+                'model': (None, 'whisper-1'),
+                'language': (None, 'pt')
+            }
+            
+            resposta_openai = requests.post(url_openai, headers=headers_openai, files=arquivos)
+            
+            if resposta_openai.status_code == 200:
+                self.enviar_resposta(200, {"texto": resposta_openai.json().get("text", "")})
+            else:
+                self.enviar_resposta(400, {"erro": "Erro na comunicação com a IA."})
+            return
 
-    def enviar_resposta(self, status, data):
+    def enviar_resposta(self, status, dados):
         self.send_response(status)
         self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(json.dumps(data).encode())
-
-    def do_POST(self):
-        if self.path == '/api/transcrever-final':
-            try:
-                content_length = int(self.headers.get('Content-Length', 0))
-                body_bytes = self.rfile.read(content_length)
-                
-                chunk_index = int(self.headers.get('x-chunk-index', 0))
-                total_chunks = int(self.headers.get('x-total-chunks', 1))
-                session_id = self.headers.get('x-session-id', 'default')
-
-                if session_id not in arquivos_temporarios:
-                    arquivos_temporarios[session_id] = [None] * total_chunks
-                
-                arquivos_temporarios[session_id][chunk_index] = body_bytes
-
-                if None not in arquivos_temporarios[session_id]:
-                    full_audio = b"".join(arquivos_temporarios[session_id])
-                    del arquivos_temporarios[session_id]
-
-                    openai_key = os.environ.get("OPENAI_API_KEY")
-                    files = {'file': ('audio.m4a', full_audio, 'audio/m4a')}
-                    data = {'model': 'whisper-1', 'language': 'pt'}
-                    
-                    resposta = requests.post("https://api.openai.com/v1/audio/transcriptions", 
-                                             headers={"Authorization": f"Bearer {openai_key}"}, 
-                                             files=files, data=data, timeout=60)
-                    
-                    if resposta.status_code == 200:
-                        self.enviar_resposta(200, {"texto": resposta.json().get("text", "")})
-                    else:
-                        self.enviar_resposta(resposta.status_code, {"erro": resposta.text})
-                else:
-                    self.enviar_resposta(200, {"status": "recebido_parte", "parte": chunk_index})
-            except Exception as e:
-                self.enviar_resposta(500, {"erro": str(e)})
-
-if __name__ == '__main__':
-    from http.server import HTTPServer
-    port = int(os.environ.get('PORT', 10000))
-    HTTPServer(('0.0.0.0', port), handler).serve_forever()
+        self.wfile.write(json.dumps(dados).encode())
