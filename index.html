@@ -5,18 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AudioScript Pro - Transcrição Avançada com IA</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
         :root {
             --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
             --card-bg: rgba(30, 41, 59, 0.7);
             --border-color: rgba(255, 255, 255, 0.1);
-            --accent-blue: #3b82f6;
-            --accent-purple: #a855f7;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
-            --success: #10b981;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
@@ -28,10 +24,10 @@
         .main-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 24px; padding: 2.5rem; backdrop-filter: blur(12px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
         .input-group { margin-bottom: 1.5rem; }
         .input-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted); }
-        input[type="email"] { width: 100%; padding: 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 12px; color: #fff; outline: none; }
+        input[type="email"], input[type="file"] { width: 100%; padding: 1rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 12px; color: #fff; outline: none; }
         
         .btn-action { width: 100%; padding: 1.2rem; background: linear-gradient(to right, #2563eb, #7c3aed); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
-        .btn-action:disabled { background: #475569; }
+        .btn-action:disabled { background: #475569; cursor: not-allowed; }
         
         .result-panel { margin-top: 2rem; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; display: none; }
         .transcription-box { max-height: 350px; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; white-space: pre-wrap; }
@@ -82,6 +78,10 @@
                     const fatiaBlob = arquivo.slice(i * TAMANHO_MAX_FATIA, Math.min((i + 1) * TAMANHO_MAX_FATIA, arquivo.size));
                     btn.innerText = `Processando parte ${i + 1} de ${totalFatias}...`;
 
+                    // Configura um timeout de 5 minutos (300 segundos) para esta requisição
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 300000);
+
                     const res = await fetch('https://meu-transcritor.onrender.com/api/transcrever-final', { 
                         method: 'POST', 
                         headers: { 
@@ -90,8 +90,11 @@
                             'x-total-chunks': totalFatias,
                             'x-session-id': sessionId
                         },
-                        body: fatiaBlob 
+                        body: fatiaBlob,
+                        signal: controller.signal
                     });
+                    
+                    clearTimeout(timeoutId);
                     
                     const dados = await res.json();
                     if (dados.texto) {
@@ -101,8 +104,10 @@
                         return;
                     }
                 }
-            } catch(e) { alert("Erro: " + e.message); btn.disabled = false; }
+            } catch(e) { 
+                alert("Erro: " + (e.name === 'AbortError' ? "O tempo de processamento excedeu o limite do servidor." : e.message)); 
+                btn.disabled = false;
+                btn.innerText = "Processar Transcrição";
+            }
         });
     </script>
-</body>
-</html>
